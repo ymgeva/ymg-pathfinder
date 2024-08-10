@@ -1,0 +1,23 @@
+{
+  "id": "ymg-pathfinder",
+  "title": "YMG Pathfinder",
+  "version": "0.0.1",
+  "compatibility": {
+    "minimum": "11",
+    "verified": "11"
+  },
+  "relationships": {
+    "systems": [
+      {
+        "id": "pf1",
+        "compatibility": {
+          "minimum": "10.0"
+        }
+      }
+    ]
+  },
+  "scripts": [
+    "scripts/spellpoints.js"
+  ],
+  "url": "https://bla"
+}
