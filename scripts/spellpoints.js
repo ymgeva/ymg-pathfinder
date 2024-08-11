@@ -3,9 +3,30 @@ const FLAG_NAMESPACE = 'ymg-pathfinder';
 const ELDRITCH_DISSONANCE =   'eldritch-dissonance';
 const ELDRITCH_DISSONANCE_OVERRIDE =   'eldritch-dissonance_override';
 
+Hooks.once('init', () => {
+    if (!game.modules.get('lib-wrapper')?.active) {
+        return ui.notifications.error("Eldritch Dissonance requires the 'libWrapper' module. Please install and activate it.");
+    }
+
+    // Wrap the getChargeCost method for spells
+    libWrapper.register('ymg-pathfinder', 'pf1.components.ItemAction.prototype.getChargeCost', function (wrapped, ...args) {
+        // Only intercept for spells
+        if (this.item.type !== 'spell') return wrapped(...args);
+
+        // Use custom logic to calculate spell cost
+        return getSpellPointsCost(this.actor, this.item);
+    }, 'MIXED');
+});
+
 // Hook that runs when Foundry is ready
 Hooks.on('ready',  () => {
     console.log("Eldritch Dissonance Module Loaded");
+
+    if (typeof pf1.components.ItemAction.prototype.getChargeCost === 'function') {
+        console.log("poopi getChargeCost exists on Item prototype");
+    } else {
+        console.log("poopi getChargeCost does NOT exist on Item prototype");
+    }
 
     // Initialize Eldritch Dissonance data for all existing actors
     game.actors.forEach(actor => {
@@ -62,8 +83,8 @@ Hooks.on('ready',  () => {
         html.find("button[name='attack_full']").closest(".form-group").before(costElement);
         app.setPosition({ height: 'auto' }); // Adjusts height automatically based on content
     });
-
 });
+
 
 async function initializeEldritchDissonance(actor) {
     if (actor.type !== 'character') return;
@@ -104,7 +125,7 @@ function getSpellPointsCost(actor, spell) {
     const isOverride = spell.getFlag(FLAG_NAMESPACE, ELDRITCH_DISSONANCE_OVERRIDE) || false;
     if (isOverride) {
         console.log("Eldritch: %s | cost: override", spellName);
-        return -1;
+        return spellLevel + 1;
     }
 
     const casterType = spell.spellbook.spellPreparationMode
