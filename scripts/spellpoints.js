@@ -4,6 +4,7 @@ const ELDRITCH_DISSONANCE =   'eldritch-dissonance';
 const ELDRITCH_DISSONANCE_OVERRIDE =   'eldritch-dissonance_override';
 
 Hooks.once('init', () => {
+
     if (!game.modules.get('lib-wrapper')?.active) {
         return ui.notifications.error("Eldritch Dissonance requires the 'libWrapper' module. Please install and activate it.");
     }
@@ -16,10 +17,19 @@ Hooks.once('init', () => {
         // Use custom logic to calculate spell cost
         return getSpellPointsCost(this.actor, this.item);
     }, 'MIXED');
+
+    libWrapper.register('ymg-pathfinder', 'pf1.actionUse.ActionUse.prototype.alterRollData', function (wrapped, ...args) {
+        if (this.item.type === 'spell' && args[0].bypassEldritchDissonance) {
+            foundry.utils.setProperty(this.item, "bypassEldritchDissonance", true);
+        }
+
+        return wrapped(...args);
+    }, 'MIXED');
+
 });
 
 // Hook that runs when Foundry is ready
-Hooks.on('ready',  () => {
+Hooks.on('ready',  async () => {
     console.log("Eldritch Dissonance Module Loaded");
 
     if (typeof pf1.components.ItemAction.prototype.getChargeCost === 'function') {
@@ -29,15 +39,39 @@ Hooks.on('ready',  () => {
     }
 
     // Initialize Eldritch Dissonance data for all existing actors
-    game.actors.forEach(actor => {
-        initializeEldritchDissonance(actor);
-    });
+    for (const actor of game.actors) {
+        await initializeEldritchDissonance(actor);
+    }
 
-    // Listen for spell casting events
-    Hooks.on("pf1CreateActionUse", async (actionUse)  => {
-        if (actionUse.item.type !== 'spell')
-            return true
-        return await handlePrecastSpell(actionUse);
+    // // Listen for spell casting events
+    // Hooks.on("pf1CreateActionUse", async (actionUse)  => {
+    //     if (actionUse.item.type !== 'spell')
+    //         return true
+    //     return handlePrecastSpell(actionUse);
+    // });
+
+    Hooks.on('renderActorSheet', async (app, html, data) => {
+        // Select all spell entries within the actor sheet
+        html.find('ol.item-list[data-type="spell"] li.item.flexrow').each((index, element) => {
+            const spellId = $(element).data('item-id'); // Get the spell ID from the 'data-item-id' attribute
+            if (getCastSpells(app.actor, spellId) > 0) {
+                // const resetButton = $(`<button type="button" class="reset-dissonance">Reset Dissonance</button>`);
+                const resetButton = $(`<button type="button" class="reset-dissonance">Reset Dissonance</button>`).css({
+                    'font-size': '0.75em',     // Smaller font size
+                    'margin-left': '5px',      // Small margin to separate from spell name
+                    'padding': '2px 5px',      // Adjust padding to reduce button size
+                    'max-width': '100px',      // Limit button width to prevent overlap
+                    'flex-shrink': 0,          // Prevent the button from shrinking too much
+                });
+                // Append the reset button inside the .item-name div, at the end
+                $(element).find('.item-name.rollable').append(resetButton);
+
+                // Bind the click event to the reset button
+                resetButton.on('click', async () => {
+                    await resetEldritchDissonance(app.actor, spellId);
+                });
+            }
+        });
     });
 
     Hooks.on("pf1PreActionUse", async (actionUse)  => {
@@ -69,7 +103,14 @@ Hooks.on('ready',  () => {
     Hooks.on('renderAttackDialog', (app, html, data) => {
         if (data.action.item.type !== 'spell') return;
 
-        const spellCost = data.action.getChargeCost();
+        let spellCost;
+        if (data.flags.bypassEldritchDissonance || false) {
+            spellCost = data.action.item.getDefaultChargeCost()
+
+        }
+        else {
+            spellCost = data.action.getChargeCost();
+        }
 
         // Create a new form group for the spell cost
         const costElement = $(`
@@ -81,23 +122,38 @@ Hooks.on('ready',  () => {
           </div>
         `);
         html.find("button[name='attack_full']").closest(".form-group").before(costElement);
+
+        const bypassCheckbox = $(`
+          <div class="form-group">
+            <label>Bypass Eldritch Dissonance</label>
+            <div class="form-fields">
+              <input type="checkbox" name="bypassEldritchDissonance">
+            </div>
+          </div>
+        `);
+        costElement.after(bypassCheckbox);
         app.setPosition({ height: 'auto' }); // Adjusts height automatically based on content
+        const isBypassSet = app.flags?.bypassEldritchDissonance || false;
+        html.find(`input[type="checkbox"][name="bypassEldritchDissonance"]`).prop("checked", isBypassSet);
+        html.find(`input[type="checkbox"][name="bypassEldritchDissonance"]`).on("change", app._onToggleFlag.bind(app));
     });
 });
 
 
-async function initializeEldritchDissonance(actor) {
+async function initializeEldritchDissonance(actor, force = false) {
     if (actor.type !== 'character') return;
     const hasFlag = actor.getFlag(FLAG_NAMESPACE, ELDRITCH_DISSONANCE) !== undefined;
-    if (!hasFlag) {
-        actor.setFlag(FLAG_NAMESPACE, ELDRITCH_DISSONANCE, {});
+    if (force || !hasFlag) {
+        await actor.unsetFlag(FLAG_NAMESPACE, ELDRITCH_DISSONANCE);
+        await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
+        await actor.setFlag(FLAG_NAMESPACE, ELDRITCH_DISSONANCE, {"dummy": 0});
+        await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
     }
+    await actor.update({});
 }
 
-async function handlePrecastSpell(actionUse) {
+function handlePrecastSpell(actionUse) {
     if (!actionUse) return true;
-
-    await initializeEldritchDissonance(actionUse.actor);
 
     spellCost = getSpellPointsCost(actionUse.actor, actionUse.item);
     if (spellCost < 0) {
@@ -113,6 +169,13 @@ async function handlePrecastSpell(actionUse) {
     return true;
 }
 
+function getCastSpells(actor, spellId) {
+    if (!actor) return -1;
+    current = actor.getFlag(FLAG_NAMESPACE, ELDRITCH_DISSONANCE);
+    const castSpells = duplicate(current) || {};
+    return castSpells[spellId] || 0;
+}
+
 function getSpellPointsCost(actor, spell) {
     if (!actor || !spell) return -1;
 
@@ -122,7 +185,7 @@ function getSpellPointsCost(actor, spell) {
     }
 
     const spellName = spell.name;
-    const isOverride = spell.getFlag(FLAG_NAMESPACE, ELDRITCH_DISSONANCE_OVERRIDE) || false;
+    const isOverride = spell.getFlag(FLAG_NAMESPACE, ELDRITCH_DISSONANCE_OVERRIDE) || spell.bypassEldritchDissonance;
     if (isOverride) {
         console.log("Eldritch: %s | cost: override", spellName);
         return spellLevel + 1;
@@ -131,11 +194,11 @@ function getSpellPointsCost(actor, spell) {
     const casterType = spell.spellbook.spellPreparationMode
     let castSpells = duplicate(actor.getFlag(FLAG_NAMESPACE, ELDRITCH_DISSONANCE)) || {};
 
-    let spellCount = castSpells[spellName] || 0;
+    const spellId = spell._id;
+    let spellCount = castSpells[spellId] || 0;
     let additionalCost = (casterType === 'prepared') ? spellLevel * spellCount : spellCount;
 
     let spellCost = 1 + spellLevel + additionalCost;
-    spell.system.uses.spellPointCost
 
     console.log("Eldritch: %s | cost: %d", spellName, spellCost);
     return spellCost;
@@ -154,10 +217,14 @@ async function handleSpellCast(actor, spell) {
         return true;
     }
 
-    const spellName = spell.name;
-    let castSpells = duplicate(actor.getFlag(FLAG_NAMESPACE, ELDRITCH_DISSONANCE)) || {};
-    let spellCount = castSpells[spellName] || 0;
-    castSpells[spellName] = spellCount + 1;
+
+    foundry.utils.setProperty(spell, "bypassEldritchDissonance", false);
+
+    const spellId = spell._id;
+    let current = await actor.getFlag(FLAG_NAMESPACE, ELDRITCH_DISSONANCE);
+    let castSpells = duplicate(current || {});
+    let spellCount = castSpells[spellId] || 0;
+    castSpells[spellId] = spellCount + 1;
     await actor.setFlag(FLAG_NAMESPACE, ELDRITCH_DISSONANCE, castSpells);
     return true;
 }
@@ -168,7 +235,36 @@ async function handleSpellCast(actor, spell) {
  */
 async function resetSpellList(actor) {
     if (!actor) return;
-    await actor.unsetFlag(FLAG_NAMESPACE, ELDRITCH_DISSONANCE);
+    await initializeEldritchDissonance(actor, true);
     ui.notifications.info(`${actor.name}'s list of cast spells has been reset.`);
 }
 
+async function resetEldritchDissonance(actor, spellId) {
+    // Get the current Eldritch Dissonance data for the actor
+    const current = await actor.getFlag(FLAG_NAMESPACE, ELDRITCH_DISSONANCE);
+    let castSpells = duplicate(current) || {};
+
+    // Get the spell by its ID
+    const spell = actor.items.get(spellId);
+
+    if (spell) {
+        const spellName = spell.name;
+
+        // Reset the spell's dissonance count
+        if (castSpells[spellId] !== undefined) {
+            delete castSpells[spellId];
+
+            await initializeEldritchDissonance(actor, true);
+            await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
+
+            if (Object.keys(castSpells).length > 0) {
+                await actor.setFlag(FLAG_NAMESPACE, ELDRITCH_DISSONANCE, castSpells);
+                await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
+            }
+            ui.notifications.info(`${spellName}'s Eldritch Dissonance count has been reset.`);
+            actor.sheet.render(true);
+        } else {
+            ui.notifications.warn(`${spellName} has no Eldritch Dissonance to reset.`);
+        }
+    }
+}
