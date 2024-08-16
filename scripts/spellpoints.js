@@ -123,19 +123,23 @@ Hooks.on('ready',  async () => {
         `);
         html.find("button[name='attack_full']").closest(".form-group").before(costElement);
 
-        const bypassCheckbox = $(`
-          <div class="form-group">
-            <label>Bypass Eldritch Dissonance</label>
-            <div class="form-fields">
-              <input type="checkbox" name="bypassEldritchDissonance">
-            </div>
-          </div>
-        `);
-        costElement.after(bypassCheckbox);
+        current = getCastSpells(data.action.actor, data.action.item._id);
+        if (current > 0) {
+            const bypassCheckbox = $(`
+              <div class="form-group">
+                <label>Bypass Eldritch Dissonance</label>
+                <div class="form-fields">
+                  <input type="checkbox" name="bypassEldritchDissonance">
+                </div>
+              </div>
+            `);
+            costElement.after(bypassCheckbox);
+            const isBypassSet = app.flags?.bypassEldritchDissonance || false;
+            html.find(`input[type="checkbox"][name="bypassEldritchDissonance"]`).prop("checked", isBypassSet);
+            html.find(`input[type="checkbox"][name="bypassEldritchDissonance"]`).on("change", app._onToggleFlag.bind(app));
+        }
+        
         app.setPosition({ height: 'auto' }); // Adjusts height automatically based on content
-        const isBypassSet = app.flags?.bypassEldritchDissonance || false;
-        html.find(`input[type="checkbox"][name="bypassEldritchDissonance"]`).prop("checked", isBypassSet);
-        html.find(`input[type="checkbox"][name="bypassEldritchDissonance"]`).on("change", app._onToggleFlag.bind(app));
     });
 });
 
@@ -217,6 +221,10 @@ async function handleSpellCast(actor, spell) {
         return true;
     }
 
+    isOverride = spell.getFlag(FLAG_NAMESPACE, ELDRITCH_DISSONANCE_OVERRIDE)
+    if (isOverride) {
+        return true;
+    }
 
     foundry.utils.setProperty(spell, "bypassEldritchDissonance", false);
 
