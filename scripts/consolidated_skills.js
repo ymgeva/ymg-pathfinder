@@ -296,10 +296,15 @@ function oldToNew(skillKey) {
 function getConsolidatedSkillInfo(skillKey, actor) {
     if (!CONSOLIDATED_SKILLS.hasOwnProperty(skillKey) && !ORIGINAL_SKILLS.hasOwnProperty(skillKey)) {
         console.log(`poopi custom skill key: ${skillKey}`);
-        return actor.system.skills[skillKey];
+        let skill = duplicate(actor.system.skills[skillKey]);
+        skill.fullName = skill.name;
+        skill.label = skill.name;
+        return skill;
     }
     let skill = duplicate(CONSOLIDATED_SKILLS[skillKey]);
     skill.name = CONSOLIDATED_SKILLS_NAMES[skillKey];
+    skill.fullName = CONSOLIDATED_SKILLS_NAMES[skillKey];
+    skill.label = CONSOLIDATED_SKILLS_NAMES[skillKey];
     skill.cs = isClassSkill(skillKey, actor);
     skill.mod = actor.system.abilities[skill.ability].mod;
     return skill;
@@ -386,11 +391,11 @@ function migrateClassSkillsIfNeeded(actor) {
 
 Hooks.on('pf1PrepareBaseActorData', (actor) => {
     console.log('pf1PrepareBaseActorData poopi');
-    let skills = actor.getFlag(FLAG_NAMESPACE, CONSOLIDATED_SKILLS_FLAG);
-    if (skills === undefined) {
-        skills = migrateActorSkill(actor);
-    }
-    skills = migrateActorSkill(actor);
+    // let skills = actor.getFlag(FLAG_NAMESPACE, CONSOLIDATED_SKILLS_FLAG);
+    // if (skills === undefined) {
+    //     skills = migrateActorSkill(actor);
+    // }
+    let skills = migrateActorSkill(actor);
     actor.system.skills = skills;
 
 });
