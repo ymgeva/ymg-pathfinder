@@ -1,0 +1,17 @@
+{
+  "YMGPathfinder" : {
+    "CSSkillAcr": "Acrobatics",
+    "CSSkillAth": "Athletics",
+    "CSSkillFin": "Finesse",
+    "CSSkillInf": "Influence",
+    "CSSkillNat": "Nature",
+    "CSSkillPer": "Perception",
+    "CSSkillPrf": "Performance",
+    "CSSkillReg": "Religion",
+    "CSSkillSoc": "Society",
+    "CSSkillSpl": "Spellcraft",
+    "CSSkillSte": "Stealth",
+    "CSSkillSur": "Survival",
+    "CSSkillLin": "Linguistics"
+    }
+}

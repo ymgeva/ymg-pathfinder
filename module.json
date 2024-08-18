@@ -17,7 +17,15 @@
     ]
   },
   "scripts": [
-    "scripts/spellpoints.js"
+    "scripts/spellpoints.js",
+    "scripts/consolidated_skills.js"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
   ],
   "url": "https://bla"
 }
