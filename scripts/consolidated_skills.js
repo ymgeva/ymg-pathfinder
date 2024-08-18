@@ -13,6 +13,7 @@ const CONSOLIDATED_SKILLS_NAMES = {
     cs_ste: "Stealth",
     cs_sur: "Survival",
     lin: "Linguistics",
+    cs_craft: "Craft",
 };
 
 const CONSOLIDATED_SKILLS_CONFIG = {
@@ -29,6 +30,7 @@ const CONSOLIDATED_SKILLS_CONFIG = {
     cs_ste: "YMGPathfinder.CSSkillSte",
     cs_sur: "YMGPathfinder.CSSkillSur",
     lin: "YMGPathfinder.CSSkillLin",
+    cs_craft: "YMGPathfinder.CSSkillCraft",
 };
 
 const CLASS_SKILLS = {
@@ -159,10 +161,12 @@ const NEW_TO_OLD_SKILL = {
     "cs_per": ["per", "sen"],
     "cs_prf": ["dis", "prf"],
     "cs_reg": ["kpl", "kre"],
-    "cs_soc": ["khi", "klo", "kno", "lin"],
+    "cs_soc": ["apr", "khi", "klo", "kno", "lin", "lor"],
     "cs_spl": ["kar", "spl", "umd"],
     "cs_ste": ["ste"],
-    "cs_sur": ["hea", "sur"]
+    "cs_sur": ["hea", "sur"],
+    "lin": ["lin"],
+    "cs_craft": ["art", "ken", "crf", "pro"],
 }
 
 const CONSOLIDATED_SKILLS = {
@@ -243,7 +247,13 @@ const CONSOLIDATED_SKILLS = {
         "rt": true,
         "acp": false,
         "rank": 0
-    }
+    },
+    "cs_craft": {
+        "ability": "int",
+        "rt": true,
+        "acp": false,
+        "rank": 0
+    },
 }
 
 const CONSOLIDATED_SKILLS_FLAG = 'consolidated_skills';
@@ -253,11 +263,24 @@ Hooks.once('init', async function() {
     CONFIG.PF1.skills = CONSOLIDATED_SKILLS_CONFIG;
 
     libWrapper.register('ymg-pathfinder', 'pf1.documents.actor.ActorPF.prototype.getSkillInfo', function (wrapped, ...args) {
-        if (args[0].length == 3) return wrapped(...args);
-        skill = getConsolidatedSkillInfo(args[0], this);
+        let skillKey = oldToNew(args[0]);
+        skill = getConsolidatedSkillInfo(skillKey, this);
         return skill;
     }, 'MIXED');
 });
+
+function oldToNew(skillKey) {
+    if (NEW_TO_OLD_SKILL.hasOwnProperty(skillKey)) {
+        return skillKey;
+    }
+    for (let [key, skills] of Object.entries(NEW_TO_OLD_SKILL)) {
+        if (skills.includes(skillKey)) {
+            return key;
+        }
+    }
+    console.log(`poopi Unknown skill key: ${skillKey}`);
+    return skillKey;
+}
 
 function getConsolidatedSkillInfo(skillKey, actor) {
     skill = duplicate(CONSOLIDATED_SKILLS[skillKey]);
@@ -281,11 +304,20 @@ function isClassSkill(skill, actor) {
 
 function migrateActorSkill(actor) {
     if (actor.type !== 'character') return;
-    
+
     let newSkills = duplicate(CONSOLIDATED_SKILLS);
+    const oldSkills = actor.system.skills;
     for (let [key, skill] of Object.entries(NEW_TO_OLD_SKILL)) {
+        if (oldSkills.hasOwnProperty(key)) {
+            newSkills[key].rank = oldSkills[key].rank;
+            continue;
+        }
+
         let rank = 0;
         for (let oldSkill of skill) {
+            if (!oldSkills.hasOwnProperty(oldSkill)) {
+                continue;
+            }
             rank = Math.max(rank, actor.system.skills[oldSkill].rank);
         }
         newSkills[key].rank = rank;
@@ -300,13 +332,24 @@ function migrateActorSkill(actor) {
     return newSkills;
 }
 
-async function migrateClassSkills(actor) {
+function needClassSkillsMigrate(item) {
+    for (let skillKey in CONSOLIDATED_SKILLS) {
+        if (!item.system.classSkills.hasOwnProperty(skillKey)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function migrateClassSkillsIfNeeded(actor) {
     for (let item of actor.items) {
         if (item.type !== 'class') {
             continue;
         }
-        // const isMigrated = item.getFlag(FLAG_NAMESPACE, CONSOLIDATED_SKILLS_CLASS_FLAG) !== undefined;
-        // if (isMigrated) continue;
+        if (!needClassSkillsMigrate(item)) {
+            continue;
+        }
+
 
         const className = item.name;
         const classConfig = CLASS_SKILLS[className];
@@ -317,48 +360,8 @@ async function migrateClassSkills(actor) {
         }
         item.system.classSkills = newClassSkills;
         item.system.skillsPerLevel = classConfig.points;
-        await item.setFlag(FLAG_NAMESPACE, CONSOLIDATED_SKILLS_CLASS_FLAG, true);
     }
 }
-
-// Hooks.on('renderActorSheet', async (app, html, data) => {
-//     const actor = app.actor;
-//     await migrateActorSkill(actor);
-//     const customSkills = actor.getFlag(FLAG_NAMESPACE, CONSOLIDATED_SKILLS_FLAG);
-//
-//     // Find the existing skills section and replace it with custom skills
-//     const skillsSection = html.find('.skills');  // Update this selector to match the skills section in your sheet
-//
-//     let skillsHtml = '';
-//
-//     for (let [key, skill] of Object.entries(customSkills)) {
-//         skillsHtml += `
-//             <tr class="custom-skill">
-//                 <td class="skill-name">${skill.name}</td>
-//                 <td class="skill-rank">${skill.rank}</td>
-//                 <td class="skill-modifier">${actor.system.abilities.dex.mod + skill.rank}</td>
-//                 <td class="skill-roll">
-//                     <button data-skill="${key}" data-action="rollSkill">Roll</button>
-//                 </td>
-//             </tr>
-//         `;
-//     }
-//
-//     // Replace the content of the skills section with the custom skills HTML
-//     skillsSection.html(skillsHtml);
-//
-//     // Add event listeners for skill rolls
-//     html.find('button[data-action="rollSkill"]').click(async (event) => {
-//         const skillKey = event.currentTarget.dataset.skill;
-//         const skill = customSkills[skillKey];
-//         const roll = new Roll(`1d20 + ${skill.rank + actor.system.abilities.dex.mod}`).roll();
-//         roll.toMessage({ flavor: `Rolling ${skill.name}` });
-//     });
-// });
-
-Hooks.once('ready', () => {
-    console.log('ready poopi');
-});
 
 Hooks.on('pf1PrepareBaseActorData', (actor) => {
     console.log('pf1PrepareBaseActorData poopi');
@@ -372,5 +375,6 @@ Hooks.on('pf1PrepareBaseActorData', (actor) => {
 });
 
 Hooks.on('pf1PrepareDerivedActorData', (actor) => {
+    migrateClassSkillsIfNeeded(actor);
     console.log('pf1PrepareDerivedActorData poopi');
 });
