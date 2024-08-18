@@ -259,7 +259,10 @@ const CONSOLIDATED_SKILLS = {
 const CONSOLIDATED_SKILLS_FLAG = 'consolidated_skills';
 const CONSOLIDATED_SKILLS_CLASS_FLAG = 'consolidated_skills_class';
 
+var ORIGINAL_SKILLS = {}
+
 Hooks.once('init', async function() {
+    ORIGINAL_SKILLS = duplicate(CONFIG.PF1.skills);
     CONFIG.PF1.skills = CONSOLIDATED_SKILLS_CONFIG;
 
     libWrapper.register('ymg-pathfinder', 'pf1.documents.actor.ActorPF.prototype.getSkillInfo', function (wrapped, ...args) {
@@ -267,10 +270,18 @@ Hooks.once('init', async function() {
         skill = getConsolidatedSkillInfo(skillKey, this);
         return skill;
     }, 'MIXED');
+
+    libWrapper.register('ymg-pathfinder', 'pf1.applications.SkillEditor.prototype.isStaticSkill', function (wrapped, ...args) {
+        return false;
+    }, 'MIXED');
 });
 
 function oldToNew(skillKey) {
     if (NEW_TO_OLD_SKILL.hasOwnProperty(skillKey)) {
+        return skillKey;
+    }
+    if (!ORIGINAL_SKILLS.hasOwnProperty(skillKey)) {
+        console.log(`poopi custom skill key: ${skillKey}`);
         return skillKey;
     }
     for (let [key, skills] of Object.entries(NEW_TO_OLD_SKILL)) {
@@ -283,7 +294,11 @@ function oldToNew(skillKey) {
 }
 
 function getConsolidatedSkillInfo(skillKey, actor) {
-    skill = duplicate(CONSOLIDATED_SKILLS[skillKey]);
+    if (!CONSOLIDATED_SKILLS.hasOwnProperty(skillKey) && !ORIGINAL_SKILLS.hasOwnProperty(skillKey)) {
+        console.log(`poopi custom skill key: ${skillKey}`);
+        return actor.system.skills[skillKey];
+    }
+    let skill = duplicate(CONSOLIDATED_SKILLS[skillKey]);
     skill.name = CONSOLIDATED_SKILLS_NAMES[skillKey];
     skill.cs = isClassSkill(skillKey, actor);
     skill.mod = actor.system.abilities[skill.ability].mod;
@@ -326,6 +341,12 @@ function migrateActorSkill(actor) {
         let skill = newSkills[skillKey];
         skill.cs = isClassSkill(skillKey, actor);
         skill.mod = actor.system.abilities[skill.ability].mod;
+    }
+
+    for (let skillKey in oldSkills) {
+        if (!newSkills.hasOwnProperty(skillKey) && !ORIGINAL_SKILLS.hasOwnProperty(skillKey)) {
+            newSkills[skillKey] = duplicate(oldSkills[skillKey]);
+        }
     }
 
     actor.setFlag(FLAG_NAMESPACE, CONSOLIDATED_SKILLS_FLAG, newSkills);
