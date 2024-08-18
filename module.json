@@ -6,6 +6,12 @@
     "minimum": "11",
     "verified": "11"
   },
+  "authors": [
+    {
+      "name": "Yoav Geva",
+      "discord": "yoav.geva"
+    }
+  ],
   "relationships": {
     "systems": [
       {
@@ -27,5 +33,7 @@
       "path": "lang/en.json"
     }
   ],
-  "url": "https://bla"
+  "url": "https://github.com/ymgeva/ymg-pathfinder/",
+  "download": "https://github.com/ymgeva/ymg-pathfinder/releases/download/v0.0.1/ymg-pathfinder.zip",
+  "manifest": "https://github.com/ymgeva/ymg-pathfinder/releases/download/v0.0.1/module.json"
 }
