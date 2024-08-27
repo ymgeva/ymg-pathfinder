@@ -1,7 +1,7 @@
 {
   "id": "ymg-pathfinder",
   "title": "YMG Pathfinder",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "compatibility": {
     "minimum": "11",
     "verified": "11"
@@ -34,6 +34,6 @@
     }
   ],
   "url": "https://github.com/ymgeva/ymg-pathfinder/",
-  "download": "https://github.com/ymgeva/ymg-pathfinder/releases/download/v0.0.2/ymg-pathfinder.zip",
-  "manifest": "https://github.com/ymgeva/ymg-pathfinder/releases/download/v0.0.2/module.json"
+  "download": "https://github.com/ymgeva/ymg-pathfinder/releases/download/v0.0.3/ymg-pathfinder.zip",
+  "manifest": "https://github.com/ymgeva/ymg-pathfinder/releases/download/v0.0.3/module.json"
 }

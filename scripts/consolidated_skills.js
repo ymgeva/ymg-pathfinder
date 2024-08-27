@@ -323,7 +323,6 @@ function isClassSkill(skill, actor) {
 }
 
 function migrateActorSkill(actor) {
-    if (actor.type !== 'character') return;
 
     let newSkills = duplicate(CONSOLIDATED_SKILLS);
     const oldSkills = actor.system.skills;
@@ -376,16 +375,25 @@ function migrateClassSkillsIfNeeded(actor) {
             continue;
         }
 
-
-        const className = item.name;
-        const classConfig = CLASS_SKILLS[className];
-
-        let newClassSkills = {};
-        for (let skillKey in CONSOLIDATED_SKILLS) {
-            newClassSkills[skillKey] = classConfig.skills.includes(skillKey);
+        let newClassSkills = {};        
+        if (item.name in CLASS_SKILLS) { // for regular class, use well-known config
+            const classConfig = CLASS_SKILLS[item.name];
+            for (let skillKey in CONSOLIDATED_SKILLS) {
+                newClassSkills[skillKey] = classConfig.skills.includes(skillKey);
+            }
+            item.system.skillsPerLevel = classConfig.points;    
+        }
+        else { // for NPC / Bestiary classes convert current
+            const oldClassSkills = item.system.classSkills;
+            for (let skill in oldClassSkills) {
+                if (!oldClassSkills[skill]) continue;
+                const newSkill = oldToNew(skill);
+                newClassSkills[newSkill] = true;
+            }
+            let skillPoints = Math.max(item.system.skillPoints / 2,1);
+            item.system.skillsPerLevel = skillPoints;
         }
         item.system.classSkills = newClassSkills;
-        item.system.skillsPerLevel = classConfig.points;
     }
 }
 

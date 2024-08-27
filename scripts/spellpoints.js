@@ -145,7 +145,6 @@ Hooks.on('ready',  async () => {
 
 
 async function initializeEldritchDissonance(actor, force = false) {
-    if (actor.type !== 'character') return;
     const hasFlag = actor.getFlag(FLAG_NAMESPACE, ELDRITCH_DISSONANCE) !== undefined;
     if (force || !hasFlag) {
         await actor.unsetFlag(FLAG_NAMESPACE, ELDRITCH_DISSONANCE);
@@ -175,8 +174,8 @@ function handlePrecastSpell(actionUse) {
 
 function getCastSpells(actor, spellId) {
     if (!actor) return -1;
-    current = actor.getFlag(FLAG_NAMESPACE, ELDRITCH_DISSONANCE);
-    const castSpells = duplicate(current) || {};
+    let current = actor.getFlag(FLAG_NAMESPACE, ELDRITCH_DISSONANCE);    
+    const castSpells = current ? duplicate(current) : {};
     return castSpells[spellId] || 0;
 }
 
@@ -196,7 +195,8 @@ function getSpellPointsCost(actor, spell) {
     }
 
     const casterType = spell.spellbook.spellPreparationMode
-    let castSpells = duplicate(actor.getFlag(FLAG_NAMESPACE, ELDRITCH_DISSONANCE)) || {};
+    let current = actor.getFlag(FLAG_NAMESPACE, ELDRITCH_DISSONANCE)
+    let castSpells = current ? duplicate(current) : {};
 
     const spellId = spell._id;
     let spellCount = castSpells[spellId] || 0;
@@ -230,7 +230,7 @@ async function handleSpellCast(actor, spell) {
 
     const spellId = spell._id;
     let current = await actor.getFlag(FLAG_NAMESPACE, ELDRITCH_DISSONANCE);
-    let castSpells = duplicate(current || {});
+    let castSpells = current ? duplicate(current) : {};
     let spellCount = castSpells[spellId] || 0;
     castSpells[spellId] = spellCount + 1;
     await actor.setFlag(FLAG_NAMESPACE, ELDRITCH_DISSONANCE, castSpells);
@@ -250,7 +250,7 @@ async function resetSpellList(actor) {
 async function resetEldritchDissonance(actor, spellId) {
     // Get the current Eldritch Dissonance data for the actor
     const current = await actor.getFlag(FLAG_NAMESPACE, ELDRITCH_DISSONANCE);
-    let castSpells = duplicate(current) || {};
+    let castSpells = current ? duplicate(current) : {};
 
     // Get the spell by its ID
     const spell = actor.items.get(spellId);
