@@ -307,6 +307,7 @@ function getConsolidatedSkillInfo(skillKey, actor) {
     skill.label = CONSOLIDATED_SKILLS_NAMES[skillKey];
     skill.cs = isClassSkill(skillKey, actor);
     skill.mod = actor.system.abilities[skill.ability].mod;
+    skill.rank = actor.system.skills[skillKey].rank;
     return skill;
 }
 
