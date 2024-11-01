@@ -12,7 +12,7 @@ const CONSOLIDATED_SKILLS_NAMES = {
     cs_spl: "Spellcraft",
     cs_ste: "Stealth",
     cs_sur: "Survival",
-    lin: "Linguistics",
+    cs_lin: "Linguistics",
     cs_craft: "Craft",
 };
 
@@ -29,7 +29,7 @@ const CONSOLIDATED_SKILLS_CONFIG = {
     cs_spl: "YMGPathfinder.CSSkillSpl",
     cs_ste: "YMGPathfinder.CSSkillSte",
     cs_sur: "YMGPathfinder.CSSkillSur",
-    lin: "YMGPathfinder.CSSkillLin",
+    cs_lin: "YMGPathfinder.CSSkillLin",
     cs_craft: "YMGPathfinder.CSSkillCraft",
 };
 
@@ -47,7 +47,7 @@ const CLASS_SKILLS = {
         "points": 1
     },
     "Bard": {
-        "skills": ["cs_inf", "cs_per", "cs_prf", "cs_soc", "cs_spl"],
+        "skills": ["cs_inf", "cs_per", "cs_prf", "cs_soc", "cs_spl", "cs_lin"],
         "points": 3
     },
     "Bloodrager": {
@@ -63,7 +63,7 @@ const CLASS_SKILLS = {
         "points": 2
     },
     "Cleric": {
-        "skills": ["cs_reg", "cs_spl", "cs_sur"],
+        "skills": ["cs_reg", "cs_spl", "cs_sur", "cs_lin"],
         "points": 1
     },
     "Druid": {
@@ -111,7 +111,7 @@ const CLASS_SKILLS = {
         "points": 3
     },
     "Rogue": {
-        "skills": ["cs_acr", "cs_fin", "cs_inf", "cs_per", "cs_soc", "cs_ste"],
+        "skills": ["cs_acr", "cs_fin", "cs_inf", "cs_per", "cs_soc", "cs_ste", "cs_lin"],
         "points": 4
     },
     "Shaman": {
@@ -119,7 +119,7 @@ const CLASS_SKILLS = {
         "points": 2
     },
     "Skald": {
-        "skills": ["cs_inf", "cs_prf", "cs_soc", "cs_spl"],
+        "skills": ["cs_inf", "cs_prf", "cs_soc", "cs_spl", "cs_lin"],
         "points": 2
     },
     "Slayer": {
@@ -131,7 +131,7 @@ const CLASS_SKILLS = {
         "points": 1
     },
     "Summoner": {
-        "skills": ["cs_reg", "cs_spl"],
+        "skills": ["cs_reg", "cs_spl", "cs_lin"],
         "points": 1
     },
     "Swashbuckler": {
@@ -147,7 +147,7 @@ const CLASS_SKILLS = {
         "points": 1
     },
     "Wizard": {
-        "skills": ["cs_reg", "cs_soc", "cs_spl"],
+        "skills": ["cs_reg", "cs_soc", "cs_spl", "cs_lin"],
         "points": 1
     }
 }
@@ -161,11 +161,11 @@ const NEW_TO_OLD_SKILL = {
     "cs_per": ["per", "sen"],
     "cs_prf": ["dis", "prf"],
     "cs_reg": ["kpl", "kre"],
-    "cs_soc": ["apr", "khi", "klo", "kno", "lin", "lor"],
+    "cs_soc": ["apr", "khi", "klo", "kno", "lor"],
     "cs_spl": ["kar", "spl", "umd"],
     "cs_ste": ["ste"],
     "cs_sur": ["hea", "sur"],
-    "lin": ["lin"],
+    "cs_lin": ["lin"],
     "cs_craft": ["art", "ken", "crf", "pro"],
 }
 
@@ -242,7 +242,7 @@ const CONSOLIDATED_SKILLS = {
         "acp": false,
         "rank": 0
     },
-    "lin": {
+    "cs_lin": {
         "ability": "int",
         "rt": true,
         "acp": false,
@@ -302,6 +302,7 @@ function getConsolidatedSkillInfo(skillKey, actor) {
         return skill;
     }
     let skill = duplicate(CONSOLIDATED_SKILLS[skillKey]);
+    skill.id = skillKey;
     skill.name = CONSOLIDATED_SKILLS_NAMES[skillKey];
     skill.fullName = CONSOLIDATED_SKILLS_NAMES[skillKey];
     skill.label = CONSOLIDATED_SKILLS_NAMES[skillKey];
