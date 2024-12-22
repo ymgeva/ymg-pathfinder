@@ -299,6 +299,7 @@ function getConsolidatedSkillInfo(skillKey, actor) {
         let skill = duplicate(actor.system.skills[skillKey]);
         skill.fullName = skill.name;
         skill.label = skill.name;
+        skill.id = skill.id || skillKey
         return skill;
     }
     let skill = duplicate(CONSOLIDATED_SKILLS[skillKey]);
